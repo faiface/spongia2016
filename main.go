@@ -2,6 +2,7 @@ package main
 
 import (
 	"log"
+	"math"
 
 	"github.com/faiface/gogame"
 )
@@ -23,10 +24,11 @@ func main() {
 		QuitOnClose: true,
 	}
 
-	thing := newThing(gogame.Colors["red"], gogame.Vec{})
+	thing := newThing(gogame.Colors["red"], gogame.Vec{}, 1.5*math.Max(float64(cfg.Width), float64(cfg.Height)))
 
 	err = gogame.Loop(cfg, func(ctx gogame.Context) {
 		thing.position = ctx.MousePosition()
+		thing.update(ctx.Dt)
 
 		ctx.Clear(gogame.Colors["black"])
 		thing.draw(ctx)
