@@ -1,11 +1,20 @@
 package main
 
 import (
-	"math"
 	"math/rand"
 
 	"github.com/faiface/gogame"
 )
+
+var squares []*gogame.Picture
+
+func init() {
+	for size := 40; size <= 140; size += 5 {
+		canvas := gogame.NewCanvas(size, size)
+		canvas.Clear(gogame.Colors["white"])
+		squares = append(squares, canvas.Picture().Copy())
+	}
+}
 
 type thing struct {
 	color    gogame.Color
@@ -28,7 +37,8 @@ func (t *thing) draw(out gogame.VideoOutput) {
 	bottom := out.OutputRect().Y + out.OutputRect().H
 	left, right := t.position.X-(t.position.Y-bottom), t.position.X+(t.position.Y-bottom)
 
-	out.DrawPolygon([]gogame.Vec{t.position, {X: left, Y: bottom}, {X: right, Y: bottom}}, 0, t.color)
+	out.SetMask(t.color)
+	out.DrawPolygon([]gogame.Vec{t.position, {X: left, Y: bottom}, {X: right, Y: bottom}}, 0, gogame.Colors["white"])
 
 	for i := range t.waves {
 		t.waves[i].draw(out)
@@ -70,10 +80,9 @@ func (t *thing) update(dt float64) {
 		}
 
 		t.waves = append(t.waves, wave{
-			color:     t.color,
+			square:    squares[rand.Intn(len(squares))],
 			start:     t.position,
 			dir:       dir.M(40),
-			size:      rand.Float64()*50 + 20,
 			frequency: freq,
 			time:      -1,
 		})
@@ -82,10 +91,10 @@ func (t *thing) update(dt float64) {
 }
 
 type wave struct {
-	color           gogame.Color
-	start, dir      gogame.Vec
-	size, frequency float64
-	time            float64
+	square     *gogame.Picture
+	start, dir gogame.Vec
+	frequency  float64
+	time       float64
 }
 
 func (w *wave) draw(out gogame.VideoOutput) {
@@ -97,13 +106,15 @@ func (w *wave) draw(out gogame.VideoOutput) {
 	}
 	angle := w.time * w.frequency
 
-	base := gogame.Vec{X: 0, Y: w.size}
-	a := base.Rotated(angle + 0*math.Pi/2).A(position)
-	b := base.Rotated(angle + 1*math.Pi/2).A(position)
-	c := base.Rotated(angle + 2*math.Pi/2).A(position)
-	d := base.Rotated(angle + 3*math.Pi/2).A(position)
+	sizeX, sizeY := w.square.Size()
+	rect := gogame.Rect{
+		X: position.X - float64(sizeX)/2,
+		Y: position.Y - float64(sizeY)/2,
+		W: float64(sizeX),
+		H: float64(sizeY),
+	}
 
-	out.DrawPolygon([]gogame.Vec{a, b, c, d}, 0, w.color)
+	out.DrawPicture(rect, w.square.Rotate(angle))
 }
 
 func (w *wave) update(dt float64) {

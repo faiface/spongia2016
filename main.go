@@ -1,13 +1,21 @@
 package main
 
 import (
+	"fmt"
 	"log"
 	"math"
+	"math/rand"
+	"time"
 
 	"github.com/faiface/gogame"
+	"github.com/pkg/profile"
 )
 
 func main() {
+	defer profile.Start().Stop()
+
+	rand.Seed(time.Now().UnixNano())
+
 	var err error
 
 	err = gogame.Init()
@@ -24,7 +32,18 @@ func main() {
 		QuitOnClose: true,
 	}
 
-	thing := newThing(gogame.Colors["red"], gogame.Vec{}, 1.5*math.Max(float64(cfg.Width), float64(cfg.Height)))
+	color := gogame.Color{
+		R: rand.Float64(),
+		G: rand.Float64(),
+		B: rand.Float64(),
+		A: 1,
+	}
+	thing := newThing(color, gogame.Vec{}, 1.5*math.Max(float64(cfg.Width), float64(cfg.Height)))
+
+	var (
+		frames = 0
+		second = time.Tick(time.Second)
+	)
 
 	err = gogame.Loop(cfg, func(ctx gogame.Context) {
 		thing.position = ctx.MousePosition()
@@ -32,6 +51,14 @@ func main() {
 
 		ctx.Clear(gogame.Colors["black"])
 		thing.draw(ctx)
+
+		frames++
+		select {
+		case <-second:
+			ctx.WindowSetTitle(fmt.Sprintf("Špongia 2016 | FPS: %d", frames))
+			frames = 0
+		default:
+		}
 	})
 
 	if err != nil {
