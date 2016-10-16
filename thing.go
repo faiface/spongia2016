@@ -65,13 +65,11 @@ func (t *thing) update(dt float64) {
 	t.waves = t.waves[:len(t.waves)-len(toDelete)]
 
 	if t.time < 0 {
-		var dir gogame.Vec
+		dir := gogame.Vec{X: 0, Y: +1}
 		if rand.Intn(2) == 0 {
 			dir.X = -1
-			dir.Y = +1
 		} else {
 			dir.X = +1
-			dir.Y = +1
 		}
 
 		freq := rand.Float64()*2 + 0.5
@@ -114,7 +112,7 @@ func (w *wave) draw(out gogame.VideoOutput) {
 		H: float64(sizeY),
 	}
 
-	out.DrawPicture(rect, w.square.Rotate(angle))
+	out.DrawPicture(rect, w.square.Rotated(angle))
 }
 
 func (w *wave) update(dt float64) {
