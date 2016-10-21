@@ -7,12 +7,9 @@ import (
 	"time"
 
 	"github.com/faiface/gogame"
-	"github.com/pkg/profile"
 )
 
 func main() {
-	defer profile.Start().Stop()
-
 	rand.Seed(time.Now().UnixNano())
 
 	err := gogame.Init()

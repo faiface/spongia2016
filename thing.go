@@ -1,6 +1,7 @@
 package main
 
 import (
+	"math"
 	"math/rand"
 
 	"github.com/faiface/gogame"
@@ -16,16 +17,6 @@ func init() {
 	}
 }
 
-type thing struct {
-	color    gogame.Color
-	position gogame.Vec
-	velocity gogame.Vec
-	depth    float64
-	waves    []wave
-
-	time float64
-}
-
 const (
 	waveSpeed   = 40
 	waveMinFreq = 0.5
@@ -34,8 +25,19 @@ const (
 	waveMinSpawnTime = 0.1
 	waveMaxSpawnTime = 0.4
 
-	hitLightUpTime = 3.14
+	hitLightUpTime = 5.0
 )
+
+type thing struct {
+	color        gogame.Color
+	position     gogame.Vec
+	velocity     gogame.Vec
+	acceleration gogame.Vec
+	depth        float64
+	waves        []wave
+
+	time float64
+}
 
 func newThing(color gogame.Color, position gogame.Vec, depth float64) *thing {
 	tg := &thing{
@@ -64,6 +66,7 @@ func (t *thing) draw(out gogame.VideoOutput) {
 func (t *thing) update(dt float64) {
 	t.time -= dt
 
+	t.velocity = t.velocity.A(t.acceleration.M(dt))
 	t.position = t.position.A(t.velocity.M(dt))
 
 	var toDelete []int
@@ -152,11 +155,19 @@ type hit struct {
 }
 
 func newHit(t *thing) *hit {
+	bestI, bestY := 0, t.waves[0].position().Y
+	for i, w := range t.waves {
+		y := w.position().Y
+		if y < bestY {
+			bestI, bestY = i, y
+		}
+	}
+
 	return &hit{
 		color:    t.color,
-		square:   t.waves[len(t.waves)-1].square,
-		position: t.waves[len(t.waves)-1].position(),
-		angle:    t.waves[len(t.waves)-1].angle(),
+		square:   t.waves[bestI].square,
+		position: t.waves[bestI].position(),
+		angle:    t.waves[bestI].angle(),
 	}
 }
 
@@ -165,7 +176,7 @@ func (h *hit) update(dt float64) {
 }
 
 func (h *hit) draw(out gogame.VideoOutput) {
-	mul := 0.2 + 0.8*h.time/hitLightUpTime
+	mul := math.Min(1, 0.3+0.7*h.time/hitLightUpTime)
 	mulColor := gogame.Color{
 		R: mul,
 		G: mul,
