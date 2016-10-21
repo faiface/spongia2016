@@ -26,6 +26,12 @@ const (
 	waveMaxSpawnTime = 0.4
 
 	hitLightUpTime = 5.0
+
+	explWaveCount    = 16
+	explWaveMinSpeed = 1000
+	explWaveMaxSpeed = 5000
+	explWaveMinFreq  = 4
+	explWaveMaxFreq  = 16
 )
 
 type thing struct {
@@ -176,7 +182,9 @@ func (h *hit) update(dt float64) {
 }
 
 func (h *hit) draw(out gogame.VideoOutput) {
-	mul := math.Min(1, 0.3+0.7*h.time/hitLightUpTime)
+	mul := math.Min(1, h.time/hitLightUpTime)
+	mul *= mul
+	mul = 0.3 + 0.7*mul
 	mulColor := gogame.Color{
 		R: mul,
 		G: mul,
@@ -194,4 +202,43 @@ func (h *hit) draw(out gogame.VideoOutput) {
 	}
 
 	out.DrawPicture(rect, h.square.Rotated(h.angle))
+}
+
+type explosion struct {
+	waves []wave
+}
+
+func newExplosion(h *hit) *explosion {
+	e := new(explosion)
+	e.waves = make([]wave, explWaveCount)
+	for i := range e.waves {
+		angle := rand.Float64() * 2 * math.Pi
+		speed := rand.Float64()*(explWaveMaxSpeed-explWaveMinSpeed) + explWaveMinSpeed
+		dir := gogame.Vec{
+			X: math.Cos(angle) * speed,
+			Y: math.Sin(angle) * speed,
+		}
+		freq := rand.Float64()*(explWaveMaxFreq-explWaveMinFreq) + explWaveMinFreq
+		e.waves[i] = wave{
+			square:    squares[rand.Intn(len(squares))],
+			start:     h.position,
+			dir:       dir,
+			frequency: freq,
+			time:      0,
+		}
+	}
+	return e
+}
+
+func (e *explosion) update(dt float64) {
+	for i := range e.waves {
+		e.waves[i].update(dt)
+	}
+}
+
+func (e *explosion) draw(out gogame.VideoOutput) {
+	out.SetMask(gogame.Colors["white"])
+	for i := range e.waves {
+		e.waves[i].draw(out)
+	}
 }

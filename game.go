@@ -21,6 +21,7 @@ type game struct {
 	phase         int
 	things        []*thing
 	hits          []*hit
+	explosions    []*explosion
 	pointer       gogame.Vec
 	background    gogame.Color
 }
@@ -41,6 +42,9 @@ func (g *game) update(dt float64) {
 		for _, h := range g.hits {
 			h.update(dt)
 		}
+		for _, e := range g.explosions {
+			e.update(dt)
+		}
 	}
 	for _, t := range g.things {
 		t.update(dt)
@@ -59,6 +63,10 @@ func (g *game) draw(out gogame.VideoOutput) {
 
 	for _, t := range g.things {
 		t.draw(out)
+	}
+
+	for _, e := range g.explosions {
+		e.draw(out)
 	}
 
 	g.Unlock()
@@ -103,8 +111,6 @@ func (g *game) addHit(h *hit) *hit {
 }
 
 func play(g *game) {
-	depth := 1.5 * math.Max(g.width, g.height)
-
 	g.setBackground(gogame.Color{
 		R: 0.1,
 		G: 0.1,
@@ -112,7 +118,20 @@ func play(g *game) {
 		A: 1,
 	})
 
-	// remaining things
+	for first := true; ; first = false {
+		firstPart(g, first)
+		switch g.phase {
+		case explosionPhase:
+			secondPart(g)
+		case colorfulPhase:
+			thirdPart(g)
+		}
+	}
+}
+
+func firstPart(g *game, first bool) {
+	depth := 1.5 * math.Max(g.width, g.height)
+
 	for i := 0; i < 12; i++ {
 		thing := g.addThing(newThing(
 			randomThingColor(),
@@ -129,7 +148,7 @@ func play(g *game) {
 					return false
 				}
 
-				if i == 0 { // first one
+				if first && i == 0 { // first one
 					currentHeight := thing.position.Y
 					targetHeight := g.height * 0.8
 					thing.velocity.Y = 1.1 * (targetHeight - currentHeight)
@@ -137,8 +156,8 @@ func play(g *game) {
 						thing.velocity.Y *= 50 / math.Abs(thing.velocity.Y)
 					}
 				} else { // remaining ones
-					if thing.position.Y <= 0 {
-						thing.velocity.Y = 0
+					if thing.position.Y <= -77 {
+						g.phase = colorfulPhase
 						return false
 					}
 					thing.velocity.Y = -100
@@ -149,6 +168,10 @@ func play(g *game) {
 			if !ok {
 				break
 			}
+		}
+
+		if g.phase == colorfulPhase {
+			return
 		}
 
 		g.addHit(newHit(thing))
@@ -179,6 +202,63 @@ func play(g *game) {
 	time.Sleep(5 * time.Second)
 
 	g.phase = explosionPhase
+}
+
+func secondPart(g *game) {
+	time.Sleep(time.Duration(hitLightUpTime * float64(time.Second)))
+
+	g.Lock()
+	for _, h := range g.hits {
+		g.explosions = append(g.explosions, newExplosion(h))
+	}
+	g.hits = nil
+	g.Unlock()
+
+	time.Sleep(5 * time.Second)
+
+	g.Lock()
+	g.explosions = nil
+	g.phase = dangerPhase
+	g.Unlock()
+}
+
+func thirdPart(g *game) {
+	depth := 1.5 * math.Max(g.width, g.height)
+
+	g.Lock()
+	g.hits = nil
+	g.explosions = nil
+	g.Unlock()
+
+	for {
+		g.Lock()
+		thing := g.things[len(g.things)-1]
+		g.Unlock()
+
+		for {
+			ok := func() bool {
+				g.Lock()
+				defer g.Unlock()
+				if thing.position.Y <= -thing.depth {
+					return false
+				}
+				return true
+			}()
+			if !ok {
+				break
+			}
+		}
+
+		g.setBackground(thing.color)
+		g.removeThing(thing)
+
+		newThing := g.addThing(newThing(
+			randomThingColor(),
+			gogame.Vec{X: g.width * rand.Float64(), Y: g.height * 1.1},
+			depth,
+		))
+		newThing.velocity.Y = -1000
+	}
 }
 
 func randomThingColor() gogame.Color {
