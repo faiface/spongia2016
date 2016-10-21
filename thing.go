@@ -19,18 +19,34 @@ func init() {
 type thing struct {
 	color    gogame.Color
 	position gogame.Vec
+	velocity gogame.Vec
 	depth    float64
 	waves    []wave
 
 	time float64
 }
 
+const (
+	waveSpeed   = 40
+	waveMinFreq = 0.5
+	waveMaxFreq = 2.5
+
+	waveMinSpawnTime = 0.1
+	waveMaxSpawnTime = 0.4
+
+	hitLightUpTime = 3.14
+)
+
 func newThing(color gogame.Color, position gogame.Vec, depth float64) *thing {
-	return &thing{
+	tg := &thing{
 		color:    color,
 		position: position,
 		depth:    depth,
 	}
+	for t := 0.0; t < depth/waveSpeed; t += 1.0 / 64 {
+		tg.update(1.0 / 64)
+	}
+	return tg
 }
 
 func (t *thing) draw(out gogame.VideoOutput) {
@@ -47,6 +63,8 @@ func (t *thing) draw(out gogame.VideoOutput) {
 
 func (t *thing) update(dt float64) {
 	t.time -= dt
+
+	t.position = t.position.A(t.velocity.M(dt))
 
 	var toDelete []int
 	for i := range t.waves {
@@ -72,7 +90,7 @@ func (t *thing) update(dt float64) {
 			dir.X = +1
 		}
 
-		freq := rand.Float64()*2 + 0.5
+		freq := rand.Float64()*(waveMaxFreq-waveMinFreq) + waveMinFreq
 		if dir.X < 0 {
 			freq *= -1
 		}
@@ -80,11 +98,11 @@ func (t *thing) update(dt float64) {
 		t.waves = append(t.waves, wave{
 			square:    squares[rand.Intn(len(squares))],
 			start:     t.position,
-			dir:       dir.M(40),
+			dir:       dir.M(waveSpeed),
 			frequency: freq,
 			time:      -1,
 		})
-		t.time = rand.Float64()*0.3 + 0.1
+		t.time = rand.Float64()*(waveMaxSpawnTime-waveMinSpawnTime) + waveMinSpawnTime
 	}
 }
 
@@ -95,14 +113,20 @@ type wave struct {
 	time       float64
 }
 
-func (w *wave) draw(out gogame.VideoOutput) {
-	var position gogame.Vec
+func (w *wave) position() gogame.Vec {
 	if w.time < 0 {
-		position = w.start.A(gogame.Vec{X: 0, Y: 1}.M(w.dir.Len()).M(-w.time))
-	} else {
-		position = w.start.A(w.dir.M(w.time))
+		return w.start.A(gogame.Vec{X: 0, Y: 1}.M(w.dir.Len()).M(-w.time))
 	}
-	angle := w.time * w.frequency
+	return w.start.A(w.dir.M(w.time))
+}
+
+func (w *wave) angle() float64 {
+	return w.time * w.frequency
+}
+
+func (w *wave) draw(out gogame.VideoOutput) {
+	position := w.position()
+	angle := w.angle()
 
 	sizeX, sizeY := w.square.Size()
 	rect := gogame.Rect{
@@ -117,4 +141,46 @@ func (w *wave) draw(out gogame.VideoOutput) {
 
 func (w *wave) update(dt float64) {
 	w.time += dt
+}
+
+type hit struct {
+	color    gogame.Color
+	square   *gogame.Picture
+	position gogame.Vec
+	angle    float64
+	time     float64
+}
+
+func newHit(t *thing) *hit {
+	return &hit{
+		color:    t.color,
+		square:   t.waves[len(t.waves)-1].square,
+		position: t.waves[len(t.waves)-1].position(),
+		angle:    t.waves[len(t.waves)-1].angle(),
+	}
+}
+
+func (h *hit) update(dt float64) {
+	h.time += dt
+}
+
+func (h *hit) draw(out gogame.VideoOutput) {
+	mul := 0.2 + 0.8*h.time/hitLightUpTime
+	mulColor := gogame.Color{
+		R: mul,
+		G: mul,
+		B: mul,
+		A: 1,
+	}
+	out.SetMask(h.color.Mul(mulColor))
+
+	sizeX, sizeY := h.square.Size()
+	rect := gogame.Rect{
+		X: h.position.X - float64(sizeX)/2,
+		Y: h.position.Y - float64(sizeY)/2,
+		W: float64(sizeX),
+		H: float64(sizeY),
+	}
+
+	out.DrawPicture(rect, h.square.Rotated(h.angle))
 }

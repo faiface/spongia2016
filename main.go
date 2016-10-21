@@ -3,7 +3,6 @@ package main
 import (
 	"fmt"
 	"log"
-	"math"
 	"math/rand"
 	"time"
 
@@ -16,9 +15,7 @@ func main() {
 
 	rand.Seed(time.Now().UnixNano())
 
-	var err error
-
-	err = gogame.Init()
+	err := gogame.Init()
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -32,27 +29,7 @@ func main() {
 		QuitOnClose: true,
 	}
 
-	color := gogame.Color{
-		R: 0.85,
-		G: 0.15,
-		B: 0.15,
-		A: 1,
-	}
-	thing := newThing(color, gogame.Vec{}, 1.5*math.Max(float64(cfg.Width), float64(cfg.Height)))
-
-	trajectory := new(function)
-	trajectory.cyclic = true
-	trajectory.add(0.0, gogame.Vec{X: 100, Y: 100})
-	trajectory.add(3.0, gogame.Vec{X: 900, Y: 100})
-	trajectory.add(6.0, gogame.Vec{X: 900, Y: 600})
-	trajectory.add(9.0, gogame.Vec{X: 100, Y: 600})
-	trajectory.add(12.0, gogame.Vec{X: 100, Y: 100})
-
-	passed := 0.0
-
-	for t := 0.0; t < 20.0; t += 1.0 / 60 {
-		thing.update(1.0 / 60)
-	}
+	g := newGame(float64(cfg.Width), float64(cfg.Height))
 
 	var (
 		frames = 0
@@ -60,13 +37,10 @@ func main() {
 	)
 
 	err = gogame.Loop(cfg, func(ctx gogame.Context) {
-		passed += ctx.Dt
-		thing.position = trajectory.at(passed)
-		thing.update(ctx.Dt)
+		g.setPointer(ctx.MousePosition())
 
-		ctx.SetMask(gogame.Colors["white"])
-		ctx.Clear(gogame.Color{R: 0.15, G: 0.15, B: 0.15, A: 1})
-		thing.draw(ctx)
+		g.update(ctx.Dt)
+		g.draw(ctx)
 
 		frames++
 		select {
