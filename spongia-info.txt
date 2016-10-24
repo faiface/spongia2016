@@ -1,1 +1,5 @@
+Názov tímu: faiface
+Názov hry: Vulcano
+Naprogramované v jazyku Go s použitím vlastnej knižnice, ktorá používa SDL2.
+
 Neboli použité žiadne cudzie zdroje.
