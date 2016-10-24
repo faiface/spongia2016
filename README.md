@@ -8,7 +8,7 @@ Na spustenie tejto hry je potrebné mať nainštalovanú knižnicu SDL2, konkré
 
 Potom by malo stačiť spustiť binárku.
 
-# Ovládanie
+## Ovládanie
 
 Hra sa ovláda čisto pohybom myši. Cieľom hry nie je nutne zabaviť, ale pohrať sa s hráčovou mysľou
 a vyjadriť nejakú myšlienku. Uvidíme, nakoľko sa to podarilo.
