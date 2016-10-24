@@ -118,6 +118,8 @@ func play(g *game) {
 		A: 1,
 	})
 
+	time.Sleep(5 * time.Second)
+
 	for first := true; ; first = false {
 		firstPart(g, first)
 		switch g.phase {
@@ -226,7 +228,6 @@ func thirdPart(g *game) {
 	depth := 1.5 * math.Max(g.width, g.height)
 
 	g.Lock()
-	g.hits = nil
 	g.explosions = nil
 	g.Unlock()
 
@@ -251,6 +252,9 @@ func thirdPart(g *game) {
 
 		g.setBackground(thing.color)
 		g.removeThing(thing)
+		g.Lock()
+		g.hits = nil
+		g.Unlock()
 
 		newThing := g.addThing(newThing(
 			randomThingColor(),
